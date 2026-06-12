@@ -5,6 +5,15 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type Candidate = Record<string, unknown>;
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/+$/, "") ?? "";
+
+function buildApiUrl(path: string): string {
+  if (!apiBaseUrl) {
+    throw new Error("NEXT_PUBLIC_API_URL is not configured");
+  }
+
+  return `${apiBaseUrl}${path.startsWith("/") ? path : `/${path}`}`;
+}
 
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) {
@@ -23,13 +32,11 @@ export default function CandidateDetailPage() {
   const id = params?.id ?? "";
 
   const [candidate, setCandidate] = useState<Candidate | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) {
-      setError("Missing candidate id in route");
-      setIsLoading(false);
       return;
     }
 
@@ -40,7 +47,7 @@ export default function CandidateDetailPage() {
       setError(null);
 
       try {
-        const response = await fetch(`/records/${encodeURIComponent(id)}`, {
+        const response = await fetch(buildApiUrl(`/records/${encodeURIComponent(id)}`), {
           headers: {
             Accept: "application/json",
           },
@@ -85,13 +92,17 @@ export default function CandidateDetailPage() {
             href="/"
             className="mb-4 inline-flex text-sm font-medium text-blue-700 transition hover:text-blue-900"
           >
-            <- Back to candidates
+            {"<- "}Back to candidates
           </Link>
           <h1 className="text-2xl font-semibold text-slate-900">Candidate Detail</h1>
           <p className="mt-2 text-sm text-slate-600">Candidate ID: {id || "-"}</p>
         </header>
 
-        {isLoading ? <p className="text-slate-600">Fetching record from /records/{id}...</p> : null}
+        {isLoading ? (
+          <p className="text-slate-600">
+            Fetching record from {apiBaseUrl ? `${apiBaseUrl}/records/${id}` : "NEXT_PUBLIC_API_URL/records/{id}"}...
+          </p>
+        ) : null}
 
         {error ? (
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
